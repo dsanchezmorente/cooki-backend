@@ -152,9 +152,9 @@ router.post('/', verificarToken, (req, res) => {
 
 });
 
-router.get('/', verificarToken, (req, res) => {
+router.get('/categorias', verificarToken, (req, res) => {
 
-  db.query("SELECT * FROM RECETA", (err, results) => {
+  db.query("SELECT * FROM CATEGORIA", (err, results) => {
     res.json(results);
   });
 
