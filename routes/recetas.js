@@ -13,7 +13,8 @@ router.post('/', verificarToken, (req, res) => {
     azucares,
     ingredientes,
     pasos,
-    alergenos
+    alergenos,
+    categorias
   } = req.body;
 
   const id_usuario = req.user.id;
@@ -76,7 +77,6 @@ router.post('/', verificarToken, (req, res) => {
     });
   }
 
-
   function insertarPasos(id_receta) {
 
     if (!pasos || pasos.length === 0) {
@@ -105,11 +105,10 @@ router.post('/', verificarToken, (req, res) => {
     });
   }
 
-
   function insertarAlergenos(id_receta) {
 
     if (!alergenos || alergenos.length === 0) {
-      return finalizar();
+      return insertarCategorias(id_receta);
     }
 
     const sql = `
@@ -129,10 +128,35 @@ router.post('/', verificarToken, (req, res) => {
         return db.rollback(() => res.status(500).json(err));
       }
 
-      finalizar();
+      insertarCategorias(id_receta);
     });
   }
 
+  function insertarCategorias(id_receta) {
+    if (!categorias || categorias.length == 0) {
+      return finalizar();
+    }
+
+    const sql = `
+      INSERT INTO receta_categoria
+      (id_receta, id_categoria)
+      VALUES ?
+    `;
+
+    const values = categorias.map(a => [
+      id_receta,
+      a
+    ]);
+
+    db.query(sql, [values], (err) => {
+
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+
+      finalizar();
+    });
+  }
 
   function finalizar() {
 
