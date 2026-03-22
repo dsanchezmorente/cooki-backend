@@ -176,11 +176,119 @@ router.post('/', verificarToken, (req, res) => {
 
 });
 
+router.get('/recientes', verificarToken, (req, res) => {
+
+  const id_usuario = req.user.id;
+
+  db.query(
+    "SELECT id_receta, nombre, imagen FROM receta WHERE id_usuario = ? ORDER BY fecha_creacion DESC LIMIT 5",
+    [id_usuario],
+    (err, recetas) => {
+      if (err) return res.status(500).json(err);
+      if (!recetas || recetas.length === 0) {
+        console.log("No se encontraron recetas para el usuario");
+        return res.status(200).json([]);
+      }
+
+      let procesadas = 0;
+      const resultado = [];
+
+      recetas.forEach((receta, index) => {
+        db.query(
+          "SELECT id_categoria FROM receta_categoria WHERE id_receta = ?",
+          [receta.id_receta],
+          (err, categorias) => {
+            console.log(`Receta ID ${receta.id} - Categorías encontradas:`, categorias);
+            if (err) return res.status(500).json(err);
+
+            resultado[index] = {
+              id: receta.id_receta,
+              nombre: receta.nombre,
+              imagen: receta.imagen,
+              categorias: categorias ? categorias.map(c => c.id_categoria) : []
+            };
+
+            procesadas++;
+            if (procesadas === recetas.length) {
+              console.log("Recetas procesadas:", resultado);
+              res.status(200).json(resultado);
+            }
+          }
+        );
+      });
+    }
+  );
+
+});
+
 router.get('/categorias', verificarToken, (req, res) => {
 
   db.query("SELECT * FROM CATEGORIA", (err, results) => {
     res.json(results);
   });
+
+});
+
+router.get('/:id', verificarToken, (req, res) => {
+
+  const { id } = req.params;
+  const id_usuario = req.user.id;
+
+  db.query(
+    "SELECT nombre, imagen, calorias, grasas, azucares FROM receta WHERE id = ? AND id_usuario = ?",
+    [id, id_usuario],
+    (err, results) => {
+      if (err) return res.status(500).json(err);
+      if (!results || results.length === 0) {
+        return res.status(404).json({ message: "Receta no encontrada" });
+      }
+
+      const receta = results[0];
+      let datosCompletos = { ...receta };
+
+      // Obtener ingredientes
+      db.query(
+        "SELECT orden, cantidad, unidad, ingrediente FROM receta_ingrediente WHERE id_receta = ? ORDER BY orden",
+        [id],
+        (err, ingredientes) => {
+          if (err) return res.status(500).json(err);
+          datosCompletos.ingredientes = ingredientes || [];
+
+          // Obtener pasos
+          db.query(
+            "SELECT numero, descripcion FROM paso WHERE id_receta = ? ORDER BY numero",
+            [id],
+            (err, pasos) => {
+              if (err) return res.status(500).json(err);
+              datosCompletos.pasos = pasos || [];
+
+              // Obtener alergenos
+              db.query(
+                "SELECT id_alergeno FROM receta_alergeno WHERE id_receta = ?",
+                [id],
+                (err, alergenos) => {
+                  if (err) return res.status(500).json(err);
+                  datosCompletos.alergenos = alergenos ? alergenos.map(a => a.id_alergeno) : [];
+
+                  // Obtener categorias
+                  db.query(
+                    "SELECT id_categoria FROM receta_categoria WHERE id_receta = ?",
+                    [id],
+                    (err, categorias) => {
+                      if (err) return res.status(500).json(err);
+                      datosCompletos.categorias = categorias ? categorias.map(c => c.id_categoria) : [];
+
+                      res.status(200).json(datosCompletos);
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  );
 
 });
 
