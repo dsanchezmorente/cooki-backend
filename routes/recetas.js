@@ -198,7 +198,7 @@ router.get('/recientes', verificarToken, (req, res) => {
           "SELECT id_categoria FROM receta_categoria WHERE id_receta = ?",
           [receta.id_receta],
           (err, categorias) => {
-            console.log(`Receta ID ${receta.id} - Categorías encontradas:`, categorias);
+            //console.log(`Receta ID ${receta.id} - Categorías encontradas:`, categorias);
             if (err) return res.status(500).json(err);
 
             resultado[index] = {
@@ -210,7 +210,7 @@ router.get('/recientes', verificarToken, (req, res) => {
 
             procesadas++;
             if (procesadas === recetas.length) {
-              console.log("Recetas procesadas:", resultado);
+              //console.log("Recetas procesadas:", resultado);
               res.status(200).json(resultado);
             }
           }
@@ -227,6 +227,67 @@ router.get('/categorias', verificarToken, (req, res) => {
     res.json(results);
   });
 
+});
+
+router.post('/planificar', verificarToken, (req, res) => {
+  const { fecha, id_receta } = req.body;
+  const id_usuario = req.user.id;
+
+  const sql = `INSERT INTO PLANIFICACION (fecha, id_usuario, id_receta) VALUES (?, ?, ?)`;
+  console.log(`Planificando receta ID ${id_receta} para el usuario ID ${id_usuario} en la fecha ${fecha}`);
+
+  db.query(sql, [fecha, id_usuario, id_receta], (err, result) => {
+    if (err) return res.status(500).json(err.message);
+    res.status(201).json({ message: "Receta planificada correctamente" });
+    console.log(`Receta ID ${id_receta} planificada para el usuario ID ${id_usuario} en la fecha ${fecha}`);
+  });
+});
+
+router.get('/planificadas', verificarToken, (req, res) => {
+  const id_usuario = req.user.id;
+
+  const sql = `
+    SELECT r.id_receta, r.nombre, r.imagen, DATE_FORMAT(p.fecha, '%Y-%m-%d') AS fecha
+    FROM receta r
+    JOIN PLANIFICACION p ON r.id_receta = p.id_receta
+    WHERE p.id_usuario = ?
+    ORDER BY p.fecha DESC
+  `;
+
+  db.query(sql, [id_usuario], (err, results) => {
+    console.log("Recetas planificadas encontradas:", results);
+    if (err) return res.status(500).json(err);
+    if (!results || results.length === 0) {
+      console.log("No se encontraron recetas planificadas para el usuario");
+      return res.status(200).json([]);
+    }
+
+    let procesadas = 0;
+    const resultado = [];
+
+    results.forEach((row, index) => {
+      db.query(
+        "SELECT id_categoria FROM receta_categoria WHERE id_receta = ?",
+        [row.id_receta],
+        (err, categorias) => {
+          if (err) return res.status(500).json(err);
+
+          resultado[index] = {
+            id: row.id_receta,
+            nombre: row.nombre,
+            imagen: row.imagen,
+            fecha: row.fecha,
+            categorias: categorias ? categorias.map(c => c.id_categoria) : []
+          };
+
+          procesadas++;
+          if (procesadas === results.length) {
+            res.status(200).json(resultado);
+          }
+        }
+      );
+    });
+  });
 });
 
 router.get('/:id', verificarToken, (req, res) => {
@@ -291,5 +352,7 @@ router.get('/:id', verificarToken, (req, res) => {
   );
 
 });
+
+
 
 module.exports = router;
