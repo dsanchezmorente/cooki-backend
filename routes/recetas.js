@@ -255,7 +255,6 @@ router.get('/planificadas', verificarToken, (req, res) => {
   `;
 
   db.query(sql, [id_usuario], (err, results) => {
-    console.log("Recetas planificadas encontradas:", results);
     if (err) return res.status(500).json(err);
     if (!results || results.length === 0) {
       console.log("No se encontraron recetas planificadas para el usuario");
@@ -296,7 +295,7 @@ router.get('/:id', verificarToken, (req, res) => {
   const id_usuario = req.user.id;
 
   db.query(
-    "SELECT nombre, imagen, calorias, grasas, azucares FROM receta WHERE id = ? AND id_usuario = ?",
+    "SELECT nombre, imagen, calorias, grasas, azucares FROM receta WHERE id_receta = ? AND id_usuario = ?",
     [id, id_usuario],
     (err, results) => {
       if (err) return res.status(500).json(err);
@@ -340,6 +339,7 @@ router.get('/:id', verificarToken, (req, res) => {
                       datosCompletos.categorias = categorias ? categorias.map(c => c.id_categoria) : [];
 
                       res.status(200).json(datosCompletos);
+                      console.log("Datos completos de la receta:", datosCompletos);
                     }
                   );
                 }
