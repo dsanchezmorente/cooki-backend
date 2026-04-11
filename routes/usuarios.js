@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const verificarToken = require('../middleware/auth');
 
 router.post('/registro', async (req, res) => {
 
@@ -84,6 +85,53 @@ router.post('/login', (req, res) => {
       );
 
       res.json({ token });
+    }
+  );
+});
+
+router.put('/cambiar-password', verificarToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  const id_usuario = req.user.id;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Se requieren currentPassword y newPassword' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
+  }
+
+  db.query(
+    'SELECT password FROM USUARIO WHERE id_usuario = ?',
+    [id_usuario],
+    async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error al verificar usuario' });
+      }
+
+      if (!results || results.length === 0) {
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      const user = results[0];
+      const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+
+      if (!passwordMatch) {
+        return res.status(401).json({ message: 'Contraseña actual incorrecta' });
+      }
+
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      db.query(
+        'UPDATE USUARIO SET password = ? WHERE id_usuario = ?',
+        [hashedNewPassword, id_usuario],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ message: 'Error al actualizar la contraseña' });
+          }
+
+          res.status(200).json({ message: 'Contraseña actualizada correctamente' });
+        }
+      );
     }
   );
 });

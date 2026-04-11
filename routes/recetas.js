@@ -359,7 +359,7 @@ router.get('/:id', verificarToken, (req, res) => {
                       datosCompletos.categorias = categorias ? categorias.map(c => c.id_categoria) : [];
 
                       res.status(200).json(datosCompletos);
-                      console.log("Datos completos de la receta:", datosCompletos);
+                      //console.log("Datos completos de la receta:", datosCompletos);
                     }
                   );
                 }

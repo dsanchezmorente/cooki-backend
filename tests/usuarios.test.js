@@ -1,6 +1,12 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+// Mock del middleware auth
+jest.mock('../middleware/auth', () => (req, res, next) => {
+  req.user = { id: 1 };
+  next();
+});
+
 // Mock de db
 jest.mock('../config/db', () => ({
   query: jest.fn()
@@ -104,6 +110,51 @@ describe('Rutas de Usuarios - Pruebas de Unidad', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.token).toBeDefined();
+    });
+  });
+
+  describe('Cambiar Contraseña', () => {
+    test('Debería retornar 400 si faltan campos', async () => {
+      const response = await request(app)
+        .put('/usuarios/cambiar-password')
+        .send({ currentPassword: 'oldpass' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Se requieren currentPassword y newPassword');
+    });
+
+    test('Debería retornar 401 si la contraseña actual es incorrecta', async () => {
+      const hashedPassword = await bcrypt.hash('password', 10);
+      db.query.mockImplementation((sql, params, callback) => {
+        if (sql.includes('SELECT password FROM USUARIO')) {
+          callback(null, [{ password: hashedPassword }]);
+        }
+      });
+
+      const response = await request(app)
+        .put('/usuarios/cambiar-password')
+        .send({ currentPassword: 'wrongpass', newPassword: 'newpass123' });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Contraseña actual incorrecta');
+    });
+
+    test('Debería actualizar la contraseña correctamente', async () => {
+      const hashedPassword = await bcrypt.hash('password', 10);
+      db.query
+        .mockImplementationOnce((sql, params, callback) => {
+          callback(null, [{ password: hashedPassword }]);
+        })
+        .mockImplementationOnce((sql, params, callback) => {
+          callback(null, { affectedRows: 1 });
+        });
+
+      const response = await request(app)
+        .put('/usuarios/cambiar-password')
+        .send({ currentPassword: 'password', newPassword: 'newpass123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Contraseña actualizada correctamente');
     });
   });
 });
