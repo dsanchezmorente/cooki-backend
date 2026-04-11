@@ -105,6 +105,22 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
     });
   });
 
+  describe('Obtener Alergenos', () => {
+    test('Debería retornar lista de alérgenos', async () => {
+      db.query.mockImplementation((sql, callback) => callback(null, [
+        { id_alergeno: 1, nombre: 'Gluten' }
+      ]));
+
+      const response = await request(app)
+        .get('/recetas/alergenos')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].nombre).toBe('Gluten');
+    });
+  });
+
   describe('Obtener Categorías', () => {
     test('Debería retornar lista de categorías', async () => {
       db.query.mockImplementation((sql, callback) => callback(null, [
@@ -184,6 +200,60 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.message).toBe('Receta no encontrada');
+    });
+  });
+
+  describe('Actualizar Receta', () => {
+    test('Debería actualizar receta correctamente', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 1 }))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null));
+      db.commit.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .put('/recetas/1')
+        .set('Authorization', 'Bearer token')
+        .send({
+          nombre: 'Receta Actualizada',
+          imagen: 'img_new.jpg',
+          calorias: 120,
+          grasas: 12,
+          azucares: 6,
+          ingredientes: [{ orden: 1, cantidad: 2, unidad: 'kg', ingrediente: 'Pimiento' }],
+          pasos: [{ numero: 1, descripcion: 'Mezclar' }],
+          alergenos: [2],
+          categorias: [2]
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Receta actualizada correctamente');
+    });
+  });
+
+  describe('Eliminar Receta', () => {
+    test('Debería eliminar receta correctamente', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 1 }));
+      db.commit.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .delete('/recetas/1')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Receta eliminada correctamente');
     });
   });
 });

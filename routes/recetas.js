@@ -3,6 +3,13 @@ const router = express.Router();
 const db = require('../config/db');
 const verificarToken = require('../middleware/auth');
 
+function parseInteger(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return null;
+  return Math.floor(numberValue);
+}
+
 router.post('/', verificarToken, (req, res) => {
 
   const {
@@ -17,6 +24,9 @@ router.post('/', verificarToken, (req, res) => {
     categorias
   } = req.body;
 
+  const caloriasInt = parseInteger(calorias);
+  const grasasInt = parseInteger(grasas);
+  const azucaresInt = parseInteger(azucares);
   const id_usuario = req.user.id;
 
   db.beginTransaction(err => {
@@ -31,7 +41,7 @@ router.post('/', verificarToken, (req, res) => {
 
     db.query(
       sqlReceta,
-      [id_usuario, nombre, imagen, calorias, grasas, azucares],
+      [id_usuario, nombre, imagen, caloriasInt, grasasInt, azucaresInt],
       (err, result) => {
 
         if (err) {
@@ -59,13 +69,16 @@ router.post('/', verificarToken, (req, res) => {
       VALUES ?
     `;
 
-    const values = ingredientes.map(i => [
-      id_receta,
-      i.orden,
-      i.cantidad,
-      i.unidad,
-      i.ingrediente
-    ]);
+    const values = ingredientes.map((i, index) => {
+      const orden = parseInteger(i.orden);
+      return [
+        id_receta,
+        orden > 0 ? orden : index + 1,
+        parseInteger(i.cantidad),
+        i.unidad,
+        i.ingrediente
+      ];
+    });
 
     db.query(sql, [values], (err) => {
 
@@ -221,6 +234,13 @@ router.get('/recientes', verificarToken, (req, res) => {
 
 });
 
+router.get('/alergenos', verificarToken, (req, res) => {
+  db.query("SELECT id_alergeno, nombre FROM alergeno", (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.status(200).json(results);
+  });
+});
+
 router.get('/categorias', verificarToken, (req, res) => {
 
   db.query("SELECT * FROM CATEGORIA", (err, results) => {
@@ -354,5 +374,236 @@ router.get('/:id', verificarToken, (req, res) => {
 });
 
 
+
+router.put('/:id', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const id_usuario = req.user.id;
+  const {
+    nombre,
+    imagen,
+    calorias,
+    grasas,
+    azucares,
+    ingredientes,
+    pasos,
+    alergenos,
+    categorias
+  } = req.body;
+
+  const caloriasInt = parseInteger(calorias);
+  const grasasInt = parseInteger(grasas);
+  const azucaresInt = parseInteger(azucares);
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json(err);
+
+    const sqlReceta = `
+      UPDATE receta
+      SET nombre = ?, imagen = ?, calorias = ?, grasas = ?, azucares = ?
+      WHERE id_receta = ? AND id_usuario = ?
+    `;
+
+    db.query(
+      sqlReceta,
+      [nombre, imagen, caloriasInt, grasasInt, azucaresInt, id, id_usuario],
+      (err, result) => {
+        if (err) {
+          return db.rollback(() => res.status(500).json(err));
+        }
+
+        if (!result || result.affectedRows === 0) {
+          return db.rollback(() => res.status(404).json({ message: "Receta no encontrada" }));
+        }
+
+        eliminarDatosRelacionados();
+      }
+    );
+  });
+
+  function eliminarDatosRelacionados() {
+    const sqls = [
+      ["DELETE FROM receta_categoria WHERE id_receta = ?", [id]],
+      ["DELETE FROM receta_alergeno WHERE id_receta = ?", [id]],
+      ["DELETE FROM paso WHERE id_receta = ?", [id]],
+      ["DELETE FROM receta_ingrediente WHERE id_receta = ?", [id]]
+    ];
+
+    let indice = 0;
+    ejecutarDelete();
+
+    function ejecutarDelete() {
+      if (indice >= sqls.length) {
+        insertarIngredientes();
+        return;
+      }
+
+      const [sql, params] = sqls[indice++];
+      db.query(sql, params, (err) => {
+        if (err) {
+          return db.rollback(() => res.status(500).json(err));
+        }
+        ejecutarDelete();
+      });
+    }
+  }
+
+  function insertarIngredientes() {
+    if (!ingredientes || ingredientes.length === 0) {
+      return insertarPasos();
+    }
+
+    const sql = `
+      INSERT INTO receta_ingrediente
+      (id_receta, orden, cantidad, unidad, ingrediente)
+      VALUES ?
+    `;
+
+    const values = ingredientes.map((i, index) => {
+      const orden = parseInteger(i.orden);
+      return [
+        id,
+        orden > 0 ? orden : index + 1,
+        parseInteger(i.cantidad),
+        i.unidad,
+        i.ingrediente
+      ];
+    });
+
+    db.query(sql, [values], (err) => {
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+      insertarPasos();
+    });
+  }
+
+  function insertarPasos() {
+    if (!pasos || pasos.length === 0) {
+      return insertarAlergenos();
+    }
+
+    const sql = `
+      INSERT INTO paso
+      (id_receta, numero, descripcion)
+      VALUES ?
+    `;
+
+    const values = pasos.map(p => [
+      id,
+      p.numero,
+      p.descripcion
+    ]);
+
+    db.query(sql, [values], (err) => {
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+      insertarAlergenos();
+    });
+  }
+
+  function insertarAlergenos() {
+    if (!alergenos || alergenos.length === 0) {
+      return insertarCategorias();
+    }
+
+    const sql = `
+      INSERT INTO receta_alergeno
+      (id_receta, id_alergeno)
+      VALUES ?
+    `;
+
+    const values = alergenos.map(a => [
+      id,
+      a
+    ]);
+
+    db.query(sql, [values], (err) => {
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+      insertarCategorias();
+    });
+  }
+
+  function insertarCategorias() {
+    if (!categorias || categorias.length == 0) {
+      return finalizarActualizacion();
+    }
+
+    const sql = `
+      INSERT INTO receta_categoria
+      (id_receta, id_categoria)
+      VALUES ?
+    `;
+
+    const values = categorias.map(a => [
+      id,
+      a
+    ]);
+
+    db.query(sql, [values], (err) => {
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+      finalizarActualizacion();
+    });
+  }
+
+  function finalizarActualizacion() {
+    db.commit(err => {
+      if (err) {
+        return db.rollback(() => res.status(500).json(err));
+      }
+      res.status(200).json({ message: "Receta actualizada correctamente" });
+    });
+  }
+});
+
+router.delete('/:id', verificarToken, (req, res) => {
+  const { id } = req.params;
+  const id_usuario = req.user.id;
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json(err);
+
+    const sqls = [
+      ["DELETE FROM receta_categoria WHERE id_receta = ?", [id]],
+      ["DELETE FROM receta_alergeno WHERE id_receta = ?", [id]],
+      ["DELETE FROM paso WHERE id_receta = ?", [id]],
+      ["DELETE FROM receta_ingrediente WHERE id_receta = ?", [id]],
+      ["DELETE FROM PLANIFICACION WHERE id_receta = ?", [id]],
+      ["DELETE FROM receta WHERE id_receta = ? AND id_usuario = ?", [id, id_usuario]]
+    ];
+
+    let indice = 0;
+    ejecutarDelete();
+
+    function ejecutarDelete() {
+      if (indice >= sqls.length) {
+        db.commit(err => {
+          if (err) {
+            return db.rollback(() => res.status(500).json(err));
+          }
+          res.status(200).json({ message: "Receta eliminada correctamente" });
+        });
+        return;
+      }
+
+      const [sql, params] = sqls[indice++];
+      db.query(sql, params, (err, result) => {
+        if (err) {
+          return db.rollback(() => res.status(500).json(err));
+        }
+
+        if (indice === sqls.length && (!result || result.affectedRows === 0)) {
+          return db.rollback(() => res.status(404).json({ message: "Receta no encontrada" }));
+        }
+
+        ejecutarDelete();
+      });
+    }
+  });
+});
 
 module.exports = router;
