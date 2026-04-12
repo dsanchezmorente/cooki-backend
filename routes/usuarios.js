@@ -55,14 +55,15 @@ console.log('Resultado de la inserción:', result);
 const jwt = require('jsonwebtoken');
 
 router.post('/login', (req, res) => {
-
   const { email, password } = req.body;
+  console.log('Login request body:', req.body);
 
   db.query(
     "SELECT * FROM USUARIO WHERE email = ?",
     [email],
     async (err, results) => {
       if (err) {
+        console.error('Error en consulta de usuario:', err);
         return res.status(500).json({ message: 'Error al consultar el usuario' });
       }
 
@@ -71,25 +72,33 @@ router.post('/login', (req, res) => {
       }
 
       const user = results[0];
-
       const passwordMatch = await bcrypt.compare(password, user.password);
 
       if (!passwordMatch) {
         return res.status(401).json({ message: 'Credenciales incorrectas' });
       }
 
-      // GENERACIÓN DEL TOKEN
-      const token = jwt.sign(
-        {
-          id: user.id_usuario,
-          email: user.email,
-          admin: user.admin
-        },
-        process.env.JWT_SECRET,
-        { expiresIn: '2h' }
-      );
+      if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET no configurado en el entorno');
+        return res.status(500).json({ message: 'Error interno: JWT_SECRET no configurado' });
+      }
 
-      res.json({ token });
+      try {
+        const token = jwt.sign(
+          {
+            id: user.id_usuario,
+            email: user.email,
+            admin: user.admin
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '2h' }
+        );
+
+        res.json({ token });
+      } catch (error) {
+        console.error('Error generando JWT:', error);
+        res.status(500).json({ message: 'Error al generar el token' });
+      }
     }
   );
 });
