@@ -15,4 +15,16 @@ console.log('Conectando a la base de datos...', {
   database: connection.config.database
 });
 
+connection.connect(err => {
+  if (err) {
+    console.error('Error al conectar a MySQL:', err.code, err.message);
+    return;
+  }
+  console.log('Conexión MySQL establecida.');
+});
+
+connection.on('error', err => {
+  console.error('Error de MySQL en tiempo de ejecución:', err.code, err.message);
+});
+
 module.exports = connection;
