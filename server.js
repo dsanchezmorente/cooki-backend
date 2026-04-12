@@ -12,6 +12,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.use('/usuarios', require('./routes/usuarios'));
 app.use('/recetas', require('./routes/recetas'));
 
@@ -28,6 +32,6 @@ process.on('unhandledRejection', reason => {
   console.error('[UNHANDLED REJECTION]', reason);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`COOKI server running on port ${PORT}`);
 });
