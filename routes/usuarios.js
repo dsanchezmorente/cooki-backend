@@ -7,13 +7,12 @@ const verificarToken = require('../middleware/auth');
 router.post('/registro', async (req, res) => {
 
   const { nombre, apellidos, telefono, email, password } = req.body;
-
+  console.log('Registro request body:', req.body);
   if (!nombre || !apellidos || !email || !password) {
     return res.status(400).json({ message: 'Faltan campos obligatorios' });
   }
 
   try {
-
 
     // Verificar si el email ya existe
     db.query(
@@ -36,7 +35,7 @@ router.post('/registro', async (req, res) => {
            VALUES (?, ?, ?, ?, ?, FALSE)`,
           [nombre, apellidos, telefono, email, hashedPassword],
           (err, result) => {
-
+console.log('Resultado de la inserción:', result);
             if (err) {
               return res.status(500).json({ message: `Error al registrar usuario: ${err}` });
             }
