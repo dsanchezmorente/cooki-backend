@@ -241,12 +241,125 @@ router.get('/alergenos', verificarToken, (req, res) => {
   });
 });
 
+router.post('/alergenos', verificarToken, (req, res) => {
+  const { nombre } = req.body;
+
+  if (!nombre) {
+    return res.status(400).json({ message: 'El nombre del alérgeno es obligatorio' });
+  }
+
+  const sql = `INSERT INTO alergeno (nombre) VALUES (?)`;
+  db.query(sql, [nombre], (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.status(201).json({ message: 'Alergeno creado correctamente', id_alergeno: result.insertId });
+  });
+});
+
+router.delete('/alergenos/:id', verificarToken, (req, res) => {
+  const { id } = req.params;
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json(err);
+
+    const sqls = [
+      ["DELETE FROM receta_alergeno WHERE id_alergeno = ?", [id]],
+      ["DELETE FROM usuario_alergeno WHERE id_alergeno = ?", [id]],
+      ["DELETE FROM alergeno WHERE id_alergeno = ?", [id]]
+    ];
+
+    let indice = 0;
+
+    function ejecutarDelete() {
+      if (indice >= sqls.length) {
+        db.commit(err => {
+          if (err) {
+            return db.rollback(() => res.status(500).json(err));
+          }
+          res.status(200).json({ message: "Alergeno eliminado correctamente" });
+        });
+        return;
+      }
+
+      const [sql, params] = sqls[indice++];
+      db.query(sql, params, (err, result) => {
+        if (err) {
+          return db.rollback(() => res.status(500).json(err));
+        }
+
+        if (indice === sqls.length && (!result || result.affectedRows === 0)) {
+          return db.rollback(() => res.status(404).json({ message: "Alergeno no encontrado" }));
+        }
+
+        ejecutarDelete();
+      });
+    }
+
+    ejecutarDelete();
+  });
+});
+
+router.delete('/categorias/:id', verificarToken, (req, res) => {
+  const { id } = req.params;
+
+  db.beginTransaction(err => {
+    if (err) return res.status(500).json(err);
+
+    const sqls = [
+      ["DELETE FROM receta_categoria WHERE id_categoria = ?", [id]],
+      ["DELETE FROM categoria WHERE id_categoria = ?", [id]]
+    ];
+
+    let indice = 0;
+
+    function ejecutarDelete() {
+      if (indice >= sqls.length) {
+        db.commit(err => {
+          if (err) {
+            return db.rollback(() => res.status(500).json(err));
+          }
+          res.status(200).json({ message: "Categoría eliminada correctamente" });
+        });
+        return;
+      }
+
+      const [sql, params] = sqls[indice++];
+      db.query(sql, params, (err, result) => {
+        if (err) {
+          return db.rollback(() => res.status(500).json(err));
+        }
+
+        if (indice === sqls.length && (!result || result.affectedRows === 0)) {
+          return db.rollback(() => res.status(404).json({ message: "Categoría no encontrada" }));
+        }
+
+        ejecutarDelete();
+      });
+    }
+
+    ejecutarDelete();
+  });
+});
+
 router.get('/categorias', verificarToken, (req, res) => {
 
   db.query("SELECT * FROM CATEGORIA", (err, results) => {
     res.json(results);
   });
 
+});
+
+router.post('/categorias', verificarToken, (req, res) => {
+  const { nombre, icono, color } = req.body;
+
+  if (!nombre || !icono || !color) {
+    return res.status(400).json({ message: 'Nombre, icono y color son obligatorios' });
+  }
+
+  const sql = `INSERT INTO CATEGORIA (nombre, icono, color) VALUES (?, ?, ?)`;
+  db.query(sql, [nombre, icono, color], (err, result) => {
+    if (err) return res.status(500).json(err);
+    res.status(201).json({ message: 'Categoría creada correctamente', id_categoria: result.insertId });
+  });
 });
 
 router.post('/planificar', verificarToken, (req, res) => {
@@ -372,8 +485,6 @@ router.get('/:id', verificarToken, (req, res) => {
   );
 
 });
-
-
 
 router.put('/:id', verificarToken, (req, res) => {
   const { id } = req.params;

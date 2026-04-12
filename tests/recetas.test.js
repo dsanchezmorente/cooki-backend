@@ -121,6 +121,97 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
     });
   });
 
+  describe('Crear Alergeno', () => {
+    test('Debería crear un alérgeno nuevo correctamente', async () => {
+      db.query.mockImplementation((sql, params, callback) => callback(null, { insertId: 2 }));
+
+      const response = await request(app)
+        .post('/recetas/alergenos')
+        .set('Authorization', 'Bearer token')
+        .send({ nombre: 'Lácteos' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toBe('Alergeno creado correctamente');
+      expect(response.body.id_alergeno).toBe(2);
+    });
+
+    test('Debería retornar 400 si falta el nombre', async () => {
+      const response = await request(app)
+        .post('/recetas/alergenos')
+        .set('Authorization', 'Bearer token')
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('El nombre del alérgeno es obligatorio');
+    });
+  });
+
+  describe('Eliminar Alergeno', () => {
+    test('Debería eliminar alérgeno y registros relacionados', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 1 }));
+      db.commit.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .delete('/recetas/alergenos/1')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Alergeno eliminado correctamente');
+    });
+
+    test('Debería retornar 404 si el alérgeno no existe', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 0 }));
+      db.rollback.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .delete('/recetas/alergenos/999')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe('Alergeno no encontrado');
+    });
+  });
+
+  describe('Eliminar Categoría', () => {
+    test('Debería eliminar categoría y registros relacionados', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 1 }));
+      db.commit.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .delete('/recetas/categorias/1')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Categoría eliminada correctamente');
+    });
+
+    test('Debería retornar 404 si la categoría no existe', async () => {
+      db.beginTransaction.mockImplementation((callback) => callback(null));
+      db.query
+        .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null, { affectedRows: 0 }));
+      db.rollback.mockImplementation((callback) => callback(null));
+
+      const response = await request(app)
+        .delete('/recetas/categorias/999')
+        .set('Authorization', 'Bearer token');
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe('Categoría no encontrada');
+    });
+  });
+
   describe('Obtener Categorías', () => {
     test('Debería retornar lista de categorías', async () => {
       db.query.mockImplementation((sql, callback) => callback(null, [
@@ -133,6 +224,31 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveLength(1);
+    });
+  });
+
+  describe('Crear Categoría', () => {
+    test('Debería crear una categoría nueva correctamente', async () => {
+      db.query.mockImplementation((sql, params, callback) => callback(null, { insertId: 2 }));
+
+      const response = await request(app)
+        .post('/recetas/categorias')
+        .set('Authorization', 'Bearer token')
+        .send({ nombre: 'Postre', icono: 'cake', color: '#FF00FF' });
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toBe('Categoría creada correctamente');
+      expect(response.body.id_categoria).toBe(2);
+    });
+
+    test('Debería retornar 400 si faltan datos', async () => {
+      const response = await request(app)
+        .post('/recetas/categorias')
+        .set('Authorization', 'Bearer token')
+        .send({ nombre: 'Postre', icono: 'cake' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('Nombre, icono y color son obligatorios');
     });
   });
 
