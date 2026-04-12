@@ -342,7 +342,7 @@ router.delete('/categorias/:id', verificarToken, (req, res) => {
 
 router.get('/categorias', verificarToken, (req, res) => {
 
-  db.query("SELECT * FROM CATEGORIA", (err, results) => {
+  db.query("SELECT * FROM categoria", (err, results) => {
     res.json(results);
   });
 
@@ -355,7 +355,7 @@ router.post('/categorias', verificarToken, (req, res) => {
     return res.status(400).json({ message: 'Nombre, icono y color son obligatorios' });
   }
 
-  const sql = `INSERT INTO CATEGORIA (nombre, icono, color) VALUES (?, ?, ?)`;
+  const sql = `INSERT INTO categoria (nombre, icono, color) VALUES (?, ?, ?)`;
   db.query(sql, [nombre, icono, color], (err, result) => {
     if (err) return res.status(500).json(err);
     res.status(201).json({ message: 'Categoría creada correctamente', id_categoria: result.insertId });
@@ -366,7 +366,7 @@ router.post('/planificar', verificarToken, (req, res) => {
   const { fecha, id_receta } = req.body;
   const id_usuario = req.user.id;
 
-  const sql = `INSERT INTO PLANIFICACION (fecha, id_usuario, id_receta) VALUES (?, ?, ?)`;
+  const sql = `INSERT INTO planificacion (fecha, id_usuario, id_receta) VALUES (?, ?, ?)`;
   console.log(`Planificando receta ID ${id_receta} para el usuario ID ${id_usuario} en la fecha ${fecha}`);
 
   db.query(sql, [fecha, id_usuario, id_receta], (err, result) => {
@@ -383,7 +383,7 @@ router.get('/planificadas', verificarToken, (req, res) => {
   const sql = `
     SELECT r.id_receta, r.nombre, r.imagen, DATE_FORMAT(p.fecha, '%Y-%m-%d') AS fecha
     FROM receta r
-    JOIN PLANIFICACION p ON r.id_receta = p.id_receta
+    JOIN planificacion p ON r.id_receta = p.id_receta
     WHERE p.id_usuario = ?
     ORDER BY p.fecha DESC
   `;
@@ -695,7 +695,7 @@ router.delete('/:id', verificarToken, (req, res) => {
       ["DELETE FROM receta_alergeno WHERE id_receta = ?", [id]],
       ["DELETE FROM paso WHERE id_receta = ?", [id]],
       ["DELETE FROM receta_ingrediente WHERE id_receta = ?", [id]],
-      ["DELETE FROM PLANIFICACION WHERE id_receta = ?", [id]],
+      ["DELETE FROM planificacion WHERE id_receta = ?", [id]],
       ["DELETE FROM receta WHERE id_receta = ? AND id_usuario = ?", [id, id_usuario]]
     ];
 

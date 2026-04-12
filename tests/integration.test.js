@@ -36,7 +36,7 @@ describe('Prueba de Integración: Flujo Completo de Usuario y Receta', () => {
     // Mock registro
     db.query
       .mockImplementationOnce((sql, params, callback) => {
-        if (sql.includes('SELECT id_usuario FROM USUARIO')) {
+        if (sql.includes('SELECT id_usuario FROM usuario')) {
           callback(null, []);
         }
       })

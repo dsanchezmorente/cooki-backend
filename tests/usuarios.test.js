@@ -45,7 +45,7 @@ describe('Rutas de Usuarios - Pruebas de Unidad', () => {
 
     test('Debería retornar 409 si el email ya existe', async () => {
       db.query.mockImplementation((sql, params, callback) => {
-        if (sql.includes('SELECT id_usuario FROM USUARIO')) {
+        if (sql.includes('SELECT id_usuario FROM usuario')) {
           callback(null, [{ id_usuario: 1 }]);
         }
       });
@@ -61,7 +61,7 @@ describe('Rutas de Usuarios - Pruebas de Unidad', () => {
     test('Debería registrar usuario exitosamente', async () => {
       db.query
         .mockImplementationOnce((sql, params, callback) => {
-          if (sql.includes('SELECT id_usuario FROM USUARIO')) {
+          if (sql.includes('SELECT id_usuario FROM usuario')) {
             callback(null, []);
           }
         })
@@ -126,7 +126,7 @@ describe('Rutas de Usuarios - Pruebas de Unidad', () => {
     test('Debería retornar 401 si la contraseña actual es incorrecta', async () => {
       const hashedPassword = await bcrypt.hash('password', 10);
       db.query.mockImplementation((sql, params, callback) => {
-        if (sql.includes('SELECT password FROM USUARIO')) {
+        if (sql.includes('SELECT password FROM usuario')) {
           callback(null, [{ password: hashedPassword }]);
         }
       });
