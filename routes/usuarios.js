@@ -16,7 +16,7 @@ router.post('/registro', async (req, res) => {
 
     // Verificar si el email ya existe
     db.query(
-      "SELECT id_usuario FROM USUARIO WHERE email = ?",
+      "SELECT id_usuario FROM usuario WHERE email = ?",
       [email],
       async (err, results) => {
         if (err) {
@@ -30,7 +30,7 @@ router.post('/registro', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         db.query(
-          `INSERT INTO USUARIO 
+          `INSERT INTO usuario 
            (nombre, apellidos, telefono, email, password, admin)
            VALUES (?, ?, ?, ?, ?, FALSE)`,
           [nombre, apellidos, telefono, email, hashedPassword],
@@ -59,7 +59,7 @@ router.post('/login', (req, res) => {
   console.log('Login request body:', req.body);
 
   db.query(
-    "SELECT * FROM USUARIO WHERE email = ?",
+    "SELECT * FROM usuario WHERE email = ?",
     [email],
     async (err, results) => {
       if (err) {
@@ -116,7 +116,7 @@ router.put('/cambiar-password', verificarToken, async (req, res) => {
   }
 
   db.query(
-    'SELECT password FROM USUARIO WHERE id_usuario = ?',
+    'SELECT password FROM usuario WHERE id_usuario = ?',
     [id_usuario],
     async (err, results) => {
       if (err) {
@@ -136,7 +136,7 @@ router.put('/cambiar-password', verificarToken, async (req, res) => {
 
       const hashedNewPassword = await bcrypt.hash(newPassword, 10);
       db.query(
-        'UPDATE USUARIO SET password = ? WHERE id_usuario = ?',
+        'UPDATE usuario SET password = ? WHERE id_usuario = ?',
         [hashedNewPassword, id_usuario],
         (err) => {
           if (err) {
