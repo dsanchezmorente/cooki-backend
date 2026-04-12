@@ -1,20 +1,11 @@
 const mysql = require('mysql2');
-
   const connection = mysql.createConnection({
-  host: process.env.MYSQLHOST,
-  user: process.env.MYSQLUSER,
-  password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQL_DATABASE
+  host: process.env.MYSQL_PUBLIC_URL || 'localhost',
+  user: process.env.MYSQLUSER || 'root',
+  password: process.env.MYSQLPASSWORD || 'temporal',
+  database: process.env.MYSQL_DATABASE || 'cooki'
 });
 
-/*
-const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: 'temporal',
-  database: 'cooki'
-});
-*/
+console.log('Conectando a la base de datos...'+connection.config.host);
 
 module.exports = connection;
-
