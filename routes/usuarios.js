@@ -20,8 +20,11 @@ router.post('/registro', async (req, res) => {
       "SELECT id_usuario FROM USUARIO WHERE email = ?",
       [email],
       async (err, results) => {
+        if (err) {
+          return res.status(500).json({ message: 'Error al verificar email' });
+        }
 
-        if (results.length > 0) {
+        if (!results || results.length > 0) {
           return res.status(409).json({ message: 'El email ya está registrado' });
         }
 
@@ -60,8 +63,11 @@ router.post('/login', (req, res) => {
     "SELECT * FROM USUARIO WHERE email = ?",
     [email],
     async (err, results) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error al consultar el usuario' });
+      }
 
-      if (results.length === 0) {
+      if (!results || results.length === 0) {
         return res.status(401).json({ message: 'Credenciales incorrectas' });
       }
 
