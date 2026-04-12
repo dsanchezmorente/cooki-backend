@@ -378,6 +378,7 @@ router.post('/planificar', verificarToken, (req, res) => {
 
 router.get('/planificadas', verificarToken, (req, res) => {
   const id_usuario = req.user.id;
+  console.log(`Planificadas request for user ${id_usuario}`);
 
   const sql = `
     SELECT r.id_receta, r.nombre, r.imagen, DATE_FORMAT(p.fecha, '%Y-%m-%d') AS fecha
@@ -388,21 +389,31 @@ router.get('/planificadas', verificarToken, (req, res) => {
   `;
 
   db.query(sql, [id_usuario], (err, results) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.error('Error al obtener recetas planificadas:', err);
+      return res.status(500).json({ message: 'Error al obtener recetas planificadas' });
+    }
+
     if (!results || results.length === 0) {
-      console.log("No se encontraron recetas planificadas para el usuario");
+      console.log('No se encontraron recetas planificadas para el usuario');
       return res.status(200).json([]);
     }
 
     let procesadas = 0;
     const resultado = [];
+    let responseSent = false;
 
     results.forEach((row, index) => {
       db.query(
-        "SELECT id_categoria FROM receta_categoria WHERE id_receta = ?",
+        'SELECT id_categoria FROM receta_categoria WHERE id_receta = ?',
         [row.id_receta],
         (err, categorias) => {
-          if (err) return res.status(500).json(err);
+          if (responseSent) return;
+          if (err) {
+            responseSent = true;
+            console.error('Error al obtener categorías de receta planificada:', err);
+            return res.status(500).json({ message: 'Error al obtener categorías de recetas planificadas' });
+          }
 
           resultado[index] = {
             id: row.id_receta,
@@ -413,7 +424,8 @@ router.get('/planificadas', verificarToken, (req, res) => {
           };
 
           procesadas++;
-          if (procesadas === results.length) {
+          if (procesadas === results.length && !responseSent) {
+            responseSent = true;
             res.status(200).json(resultado);
           }
         }
