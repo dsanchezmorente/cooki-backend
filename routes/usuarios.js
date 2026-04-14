@@ -166,7 +166,7 @@ router.get('/alergenos/:idUsuario', (req, res) => {
         return res.status(500).json({ message: 'Error al obtener los alérgenos del usuario' });
       }
 
-      res.json({ alergenos: results });
+      res.json({ alergenos: results.map(row => row.id_alergeno) });
     }
   );
 });
