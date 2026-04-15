@@ -14,16 +14,20 @@ describe('Middleware de Autenticación', () => {
     jest.clearAllMocks();
   });
 
-  test('Debería llamar a next() con token válido', () => {
-    const token = jwt.sign({ id: 1, email: 'test@example.com' }, process.env.JWT_SECRET || 'secret');
+  test('Debería llamar a next() con token válido', (done) => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'secret';
+    const token = jwt.sign({ id: 1, email: 'test@example.com' }, process.env.JWT_SECRET);
     const mockReq = {
       headers: { authorization: `Bearer ${token}` }
     };
 
     verificarToken(mockReq, mockRes, mockNext);
 
-    expect(mockNext).toHaveBeenCalled();
-    expect(mockReq.user).toBeDefined();
+    setImmediate(() => {
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockReq.user).toBeDefined();
+      done();
+    });
   });
 
   test('Debería retornar 403 si no hay header de autorización', () => {

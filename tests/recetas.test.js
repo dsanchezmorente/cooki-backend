@@ -1,6 +1,7 @@
 const request = require('supertest');
 const express = require('express');
 const jwt = require('jsonwebtoken');
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 // Mock de db
 jest.mock('../config/db', () => ({
@@ -35,6 +36,7 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
         .mockImplementationOnce((sql, params, callback) => callback(null, { insertId: 1 }))
         .mockImplementationOnce((sql, params, callback) => callback(null))
         .mockImplementationOnce((sql, params, callback) => callback(null))
+        .mockImplementationOnce((sql, params, callback) => callback(null))
         .mockImplementationOnce((sql, params, callback) => callback(null));
       db.commit.mockImplementation((callback) => callback(null));
 
@@ -60,6 +62,7 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
     test('Debería manejar error en inserción de receta', async () => {
       db.beginTransaction.mockImplementation((callback) => callback(null));
       db.query.mockImplementation((sql, params, callback) => callback(new Error('DB Error')));
+      db.rollback.mockImplementation((callback) => callback(null));
 
       const response = await request(app)
         .post('/recetas')
@@ -107,9 +110,10 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
 
   describe('Obtener Alergenos', () => {
     test('Debería retornar lista de alérgenos', async () => {
-      db.query.mockImplementation((sql, callback) => callback(null, [
-        { id_alergeno: 1, nombre: 'Gluten' }
-      ]));
+      db.query.mockImplementation((sql, paramsOrCallback, maybeCallback) => {
+        const callback = typeof paramsOrCallback === 'function' ? paramsOrCallback : maybeCallback;
+        callback(null, [{ id_alergeno: 1, nombre: 'Gluten' }]);
+      });
 
       const response = await request(app)
         .get('/recetas/alergenos')
@@ -214,9 +218,10 @@ describe('Rutas de Recetas - Pruebas de Unidad', () => {
 
   describe('Obtener Categorías', () => {
     test('Debería retornar lista de categorías', async () => {
-      db.query.mockImplementation((sql, callback) => callback(null, [
-        { id_categoria: 1, nombre: 'Vegetariana' }
-      ]));
+      db.query.mockImplementation((sql, paramsOrCallback, maybeCallback) => {
+        const callback = typeof paramsOrCallback === 'function' ? paramsOrCallback : maybeCallback;
+        callback(null, [{ id_categoria: 1, nombre: 'Vegetariana' }]);
+      });
 
       const response = await request(app)
         .get('/recetas/categorias')

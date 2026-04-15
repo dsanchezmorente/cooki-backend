@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 // Mock del middleware auth
 jest.mock('../middleware/auth', () => (req, res, next) => {

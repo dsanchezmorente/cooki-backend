@@ -1,6 +1,9 @@
 const request = require('supertest');
 const express = require('express');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 // Mock de db
 jest.mock('../config/db', () => ({
@@ -58,11 +61,12 @@ describe('Prueba de Integración: Flujo Completo de Usuario y Receta', () => {
     expect(registroResponse.status).toBe(201);
 
     // Mock login
+    const hashedPassword = await bcrypt.hash('password123', 10);
     db.query.mockImplementation((sql, params, callback) => {
       callback(null, [{
         id_usuario: 1,
         email: 'usuario@test.com',
-        password: '$2b$10$hashedpassword', // Simular hash
+        password: hashedPassword,
         admin: false
       }]);
     });
