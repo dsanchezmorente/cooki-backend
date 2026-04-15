@@ -171,62 +171,50 @@ router.get('/alergenos/:idUsuario', (req, res) => {
   );
 });
 
-router.post('/alergenos/:idUsuario', (req, res) => {
+router.put('/alergenos/:idUsuario', (req, res) => {
   const { idUsuario } = req.params;
-  const { id_alergeno } = req.body;
+  const { alergenos } = req.body;
   const usuarioId = Number(idUsuario);
-  const alergenoId = Number(id_alergeno);
 
   if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
     return res.status(400).json({ message: 'idUsuario inválido' });
   }
 
-  if (!Number.isInteger(alergenoId) || alergenoId <= 0) {
-    return res.status(400).json({ message: 'id_alergeno inválido' });
+  if (!Array.isArray(alergenos)) {
+    return res.status(400).json({ message: 'El campo alergenos debe ser un array' });
   }
 
+  const alergenoIds = alergenos.map(Number).filter(id => Number.isInteger(id) && id > 0);
+  if (alergenoIds.length !== alergenos.length) {
+    return res.status(400).json({ message: 'El array de alérgenos contiene valores inválidos' });
+  }
+
+  const distinctAlergenoIds = [...new Set(alergenoIds)];
+
   db.query(
-    'INSERT INTO usuario_alergeno (id_usuario, id_alergeno) VALUES (?, ?)',
-    [usuarioId, alergenoId],
+    'DELETE FROM usuario_alergeno WHERE id_usuario = ?',
+    [usuarioId],
     (err) => {
       if (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-          return res.status(409).json({ message: 'El alérgeno ya está asignado al usuario' });
+        return res.status(500).json({ message: 'Error al actualizar los alérgenos del usuario' });
+      }
+
+      if (distinctAlergenoIds.length === 0) {
+        return res.status(200).json({ message: 'Alergenos actualizados correctamente', alergenos: [] });
+      }
+
+      const values = distinctAlergenoIds.map((alergenoId) => [usuarioId, alergenoId]);
+      db.query(
+        'INSERT INTO usuario_alergeno (id_usuario, id_alergeno) VALUES ?',
+        [values],
+        (insertErr) => {
+          if (insertErr) {
+            return res.status(500).json({ message: 'Error al guardar los alérgenos del usuario' });
+          }
+
+          res.status(200).json({ message: 'Alergenos actualizados correctamente', alergenos: distinctAlergenoIds });
         }
-        return res.status(500).json({ message: 'Error al añadir el alérgeno al usuario' });
-      }
-
-      res.status(201).json({ message: 'Alérgeno añadido correctamente' });
-    }
-  );
-});
-
-router.delete('/alergenos/:idUsuario/:idAlergeno', (req, res) => {
-  const { idUsuario, idAlergeno } = req.params;
-  const usuarioId = Number(idUsuario);
-  const alergenoId = Number(idAlergeno);
-
-  if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
-    return res.status(400).json({ message: 'idUsuario inválido' });
-  }
-
-  if (!Number.isInteger(alergenoId) || alergenoId <= 0) {
-    return res.status(400).json({ message: 'idAlergeno inválido' });
-  }
-
-  db.query(
-    'DELETE FROM usuario_alergeno WHERE id_usuario = ? AND id_alergeno = ?',
-    [usuarioId, alergenoId],
-    (err, result) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error al eliminar el alérgeno del usuario' });
-      }
-
-      if (!result || result.affectedRows === 0) {
-        return res.status(404).json({ message: 'No se encontró el alérgeno para ese usuario' });
-      }
-
-      res.json({ message: 'Alérgeno eliminado correctamente' });
+      );
     }
   );
 });

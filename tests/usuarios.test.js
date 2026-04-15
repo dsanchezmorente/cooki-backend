@@ -157,4 +157,51 @@ describe('Rutas de Usuarios - Pruebas de Unidad', () => {
       expect(response.body.message).toBe('Contraseña actualizada correctamente');
     });
   });
+
+  describe('Alergenos de usuario', () => {
+    test('Debería retornar 400 si el body no es un array', async () => {
+      const response = await request(app)
+        .put('/usuarios/alergenos/1')
+        .send({ alergenos: 'not-array' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toBe('El campo alergenos debe ser un array');
+    });
+
+    test('Debería actualizar la lista de alérgenos del usuario', async () => {
+      db.query
+        .mockImplementationOnce((sql, params, callback) => {
+          if (sql.includes('DELETE FROM usuario_alergeno')) {
+            callback(null, { affectedRows: 2 });
+          }
+        })
+        .mockImplementationOnce((sql, params, callback) => {
+          callback(null, { affectedRows: 2 });
+        });
+
+      const response = await request(app)
+        .put('/usuarios/alergenos/1')
+        .send({ alergenos: [1, 2] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Alergenos actualizados correctamente');
+      expect(response.body.alergenos).toEqual([1, 2]);
+    });
+
+    test('Debería permitir actualizar a lista vacía', async () => {
+      db.query.mockImplementationOnce((sql, params, callback) => {
+        if (sql.includes('DELETE FROM usuario_alergeno')) {
+          callback(null, { affectedRows: 3 });
+        }
+      });
+
+      const response = await request(app)
+        .put('/usuarios/alergenos/1')
+        .send({ alergenos: [] });
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Alergenos actualizados correctamente');
+      expect(response.body.alergenos).toEqual([]);
+    });
+  });
 });
