@@ -1,11 +1,11 @@
 const mysql = require('mysql2');
 
 const dbConfig = {
-  host: process.env.DB_HOST || process.env.MYSQL_HOST || 'localhost',
-  user: process.env.DB_USER || process.env.MYSQL_USER || 'root',
-  password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD || 'temporal',
-  database: process.env.DB_NAME || process.env.MYSQL_DATABASE || 'cooki',
-  port: process.env.DB_PORT || process.env.MYSQL_PORT || undefined,
+  host: process.env.DB_HOST || process.env.MYSQL_HOST,
+  user: process.env.DB_USER || process.env.MYSQL_USER,
+  password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD,
+  database: process.env.DB_NAME || process.env.MYSQL_DATABASE,
+  port: process.env.DB_PORT || process.env.MYSQL_PORT,
   connectTimeout: 10000
 };
 
