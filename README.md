@@ -57,25 +57,8 @@ Este comando instalará todas las dependencias definidas en `package.json`:
 
 ### 1. Crear la Base de Datos
 
-Abre MySQL en tu máquina y ejecuta los siguientes comandos:
-
-```sql
--- Conectar a MySQL
-mysql -u root -p
-
--- Crear la base de datos
-CREATE DATABASE cooki;
-
--- Usar la base de datos
-USE cooki;
-
--- Aquí irían las tablas (si existen scripts de inicialización)
-```
-
-> **Nota**: Si tienes un script de inicialización (`schema.sql` o similar), ejecuta:
-> ```bash
-> mysql -u root -p cooki < schema.sql
-> ```
+Abre MySQL en tu máquina y ejecuta el fichero .sql proporcionado.
+El cual creará la base de datos COOKI , con sus tablas y algunos datos relacionados con categorías y alérgenos.
 
 ### 2. Crear Archivo de Variables de Entorno
 
